@@ -59,28 +59,3 @@ def test_pages_availability_for_author(
 ):
     response = parametrized_client.get(url)
     assert response.status_code == expected_status
-
-
-
-
-
-
-
-
-
-
-
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    'name',
-    ('news:home', 'users:login', 'users:logout', 'users:signup')
-)
-def test_pages_availability_for_anonymous_user(client, name):
-    """Страницы регистрации пользователей,
-    входа в учётную запись и выхода из неё
-    доступны анонимным пользователя"""
-    url = reverse(name)
-    response = client.get(url)
-    assert response.status_code == HTTPStatus.OK
