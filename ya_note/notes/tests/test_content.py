@@ -1,89 +1,51 @@
-from django.conf import settings
-from django.test import TestCase
-from django.urls import reverse
 from django.contrib.auth import get_user_model
-
-from datetime import datetime, timedelta
-from django.utils import timezone
-
-from news.models import News, Comment
+from django.test import TestCase, Client
+from django.urls import reverse
+from notes.models import Note
 
 User = get_user_model()
 
 
 class TestContent(TestCase):
 
-    HOME_URL = reverse('news:home')
-
     @classmethod
     def setUpTestData(cls):
+        cls.author = User.objects.create(username='Автор')
+        cls.author_client = Client()
+        cls.author_client.force_login(cls.author)
 
-        today = datetime.today()
-        all_news = [
-            News(
-                title=f'Новость {index}',
-                text='Просто текст.',
-                date=today - timedelta(days=index)
-            )
-            for index in range(settings.NEWS_COUNT_ON_HOME_PAGE + 1)
-        ]
-        News.objects.bulk_create(all_news)
-
-    def test_news_count(self):
-        # Загружаем главную страницу.
-        response = self.client.get(self.HOME_URL)
-        # Код ответа не проверяем, его уже проверили в тестах маршрутов.
-        # Получаем список объектов из словаря контекста.
-        object_list = response.context['object_list']
-        # Определяем длину списка.
-        news_count = len(object_list)
-        # Проверяем, что на странице именно 10 новостей.
-        self.assertEqual(news_count, settings.NEWS_COUNT_ON_HOME_PAGE)
-
-    def test_news_order(self):
-        response = self.client.get(self.HOME_URL)
-        object_list = response.context['object_list']
-        all_dates = [news.date for news in object_list]
-        sortred_dates = sorted(all_dates, reverse=True)
-        self.assertEqual(all_dates, sortred_dates)
-
-
-class TestDetailPage(TestCase):
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.news = News.objects.create(
-            title='Тестовая новость', text='Просто текст.'
+        cls.reader = User.objects.create(username='Читатель')
+        cls.reader_client = Client()
+        cls.reader_client.force_login(cls.reader)
+        cls.note = Note.objects.create(
+            author=cls.author,
+            title='Заголовок',
+            text='Текст',
+            slug='pasport'
         )
-        # Сохраняем в переменную адрес страницы с новостью:
-        cls.detail_url = reverse('news:detail', args=(cls.news.id,))
-        cls.author = User.objects.create(username='Комментатор')
-        # Запоминаем текущее время:
-        now = datetime.now()
-        # Создаём комментарии в цикле.
-        for index in range(2):
-            # Создаём объект и записываем его в переменную.
-            comment = Comment.objects.create(
-                news=cls.news, author=cls.author, text=f'Tекст {index}',
-            )
-            # Сразу после создания меняем время создания комментария.
-            comment.created = now + timedelta(days=index)
-            # И сохраняем эти изменения.
-            comment.save() 
+        cls.url_list = reverse('notes:list')
+        cls.url_add = reverse('notes:add')
+        cls.url_edit = reverse('notes:edit', args=(cls.note.slug,))
 
-    def test_comments_order(self):
-        response = self.client.get(self.detail_url)
-        self.assertIn('news', response.context)
-        news = response.context['news']
-        all_comments = news.comment_set.all()
-        self.assertLess(all_comments[0].created, all_comments[1].created)
+    def test_note_in_list_for_author(self):
+        """Отдельная заметка передаётся на страницу со списком заметок"""
+        response = self.author_client.get(self.url_list)
+        object_list = response.context['object_list']
+        self.assertIn(self.note, object_list)
 
-    def test_anonymous_client_has_no_form(self):
-        response = self.client.get(self.detail_url)
-        self.assertNotIn('form', response.context)
-        
-    def test_authorized_client_has_form(self):
-        # Авторизуем клиент при помощи ранее созданного пользователя.
-        self.client.force_login(self.author)
-        response = self.client.get(self.detail_url)
-        self.assertIn('form', response.context) 
+    def test_note_not_in_list_for_another_user(self):
+        """В список заметок одного пользователя не попадают
+        заметки другого пользователя"""
+        response = self.reader_client.get(self.url_list)
+        object_list = response.context['object_list']
+        self.assertNotIn(self.note, object_list)
+
+    def test_create_note_page_contains_form(self):
+        """На страницу создания заметки передаются формы"""
+        response = self.author_client.get(self.url_add)
+        self.assertIn('form', response.context)
+
+    def test_edit_note_page_contains_form(self):
+        """На страницу редактирования заметки передаются формы"""
+        response = self.author_client.get(self.url_edit)
+        self.assertIn('form', response.context)
