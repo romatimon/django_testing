@@ -41,7 +41,8 @@ def test_user_cant_use_bad_words(author_client, bad_words_data, slug_for_args):
     assert Comment.objects.count() == 0
 
 
-def test_author_can_edit_comment(author_client, comment, form_data, news_edit_url, slug_for_args):
+def test_author_can_edit_comment(author_client, comment, form_data,
+                                 news_edit_url, slug_for_args):
     """Авторизованный пользователь может редактировать свои комментарии."""
     url = reverse('news:detail', args=slug_for_args)
     response = author_client.post(news_edit_url, form_data)
@@ -51,7 +52,8 @@ def test_author_can_edit_comment(author_client, comment, form_data, news_edit_ur
 
 
 @pytest.mark.django_db
-def test_user_cant_edit_comment_of_another_user(admin_client, news_edit_url, form_data, comment):
+def test_user_cant_edit_comment_of_another_user(admin_client, news_edit_url,
+                                                form_data, comment):
     """Авторизованный пользователь не может редактировать чужие комментарии."""
     response = admin_client.post(news_edit_url, form_data)
     assert response.status_code == HTTPStatus.NOT_FOUND
@@ -59,7 +61,8 @@ def test_user_cant_edit_comment_of_another_user(admin_client, news_edit_url, for
     assert comment.text == comment_from_db.text
 
 
-def test_author_can_detele_comment(author_client, comment, news_delete_url, slug_for_args):
+def test_author_can_detele_comment(author_client, comment, news_delete_url,
+                                   slug_for_args):
     """Авторизованный пользователь может удалять свои комментарии."""
     url = reverse('news:detail', args=slug_for_args)
     response = author_client.post(news_delete_url)
@@ -68,10 +71,11 @@ def test_author_can_detele_comment(author_client, comment, news_delete_url, slug
 
 
 @pytest.mark.django_db
-def test_user_cant_delete_comment_of_another_user(admin_client, news_delete_url, form_data, comment):
+def test_user_cant_delete_comment_of_another_user(admin_client,
+                                                  news_delete_url, form_data,
+                                                  comment):
     """Авторизованный пользователь не может удалять чужие комментарии."""
     response = admin_client.post(news_delete_url, form_data)
     assert response.status_code == HTTPStatus.NOT_FOUND
     comment_from_db = Comment.objects.get(id=comment.id)
     assert comment.text == comment_from_db.text
-

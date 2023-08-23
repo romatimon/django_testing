@@ -15,7 +15,8 @@ def test_news_count(client, all_news):
 
 @pytest.mark.django_db
 def test_news_order(client, all_news):
-    """Новости отсортированы от самой свежей к самой старой. Свежие новости в начале списка."""
+    """Новости отсортированы от самой свежей к самой старой.
+    Свежие новости в начале списка."""
     url = reverse('news:home')
     response = client.get(url)
     object_list = response.context['object_list']
@@ -27,7 +28,7 @@ def test_news_order(client, all_news):
 @pytest.mark.django_db
 def test_comments_order(client, news, slug_for_comment):
     """Комментарии на странице отдельной новости отсортированы
-    в хронологическом порядке: старые в начале списка, 
+    в хронологическом порядке: старые в начале списка,
     новые — в конце."""
     detail_url = reverse('news:detail', args=slug_for_comment)
     response = client.get(detail_url)
