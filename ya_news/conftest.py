@@ -1,11 +1,13 @@
 import pytest
-from news.models import News, Comment
+
 from datetime import datetime, timedelta
+
 from django.conf import settings
 from django.utils import timezone
-from news.forms import BAD_WORDS
 from django.urls import reverse
 
+from news.models import News, Comment
+from news.forms import BAD_WORDS
 
 NEWS_DETAIL_URL = 'news:detail'
 NEWS_DELETE_URL = 'news:delete'
