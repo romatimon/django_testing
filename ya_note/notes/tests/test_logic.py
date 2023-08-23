@@ -71,7 +71,7 @@ class TestNoteCreation(TestCase):
             response,
             form='form',
             field='slug',
-            errors='pasport'+WARNING
+            errors='pasport' + WARNING
         )
 
         notes_count = Note.objects.count()
