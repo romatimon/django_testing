@@ -8,6 +8,17 @@ from notes.models import Note
 
 User = get_user_model()
 
+HOME_URL = reverse('notes:home')
+LIST_URL = 'notes:list'
+ADD_URL = 'notes:add'
+DELETE_URL = 'notes:delete'
+EDIT_URL = 'notes:edit'
+DETAIL_URL = 'notes:detail'
+SUCCESS_URL = 'notes:success'
+LOGIN_URL = 'users:login'
+LOGOUT_URL = 'users:logout'
+SIGNUP_URL = 'users:signup'
+
 
 class TestRoutes(TestCase):
 
@@ -25,24 +36,24 @@ class TestRoutes(TestCase):
         )
 
     def test_home_page(self):
-        '''Главная страница доступна анонимному пользователю. '''
-        url = reverse('notes:home')
-        response = self.client.get(url)
+        """Главная страница доступна анонимному пользователю."""
+        response = self.client.get(HOME_URL)
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_detail(self):
-        '''Страницы отдельной заметки, доступны только автору заметки.'''
-        url = reverse('notes:detail', args=(self.note.slug,))
+        """Страницы отдельной заметки, доступны только автору заметки."""
+        url = reverse(DETAIL_URL, args=(self.note.slug,))
         response = self.author_client.get(url)
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_pages_availability(self):
-        '''Страницы регистрации пользователей, входа в учётную запись
-        и выхода из неё доступны всем пользователям.'''
+        """Страницы регистрации пользователей, входа в учётную запись
+        и выхода из неё доступны всем пользователям.
+        """
         urls = (
-            ('users:login', None),
-            ('users:logout', None),
-            ('users:signup', None),
+            (LOGIN_URL, None),
+            (LOGOUT_URL, None),
+            (SIGNUP_URL, None),
         )
         for name, args in urls:
             with self.subTest(name=name):
@@ -51,12 +62,12 @@ class TestRoutes(TestCase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_redirect_for_anonymous_client_list_success_add(self):
-        '''Редирекст на страницу логина'''
-        login_url = reverse('users:login')
+        """Редирекст на страницу логина."""
+        login_url = reverse(LOGIN_URL)
         urls = (
-            ('notes:list', None),
-            ('notes:success', None),
-            ('notes:add', None),
+            (LIST_URL, None),
+            (SUCCESS_URL, None),
+            (ADD_URL, None),
         )
         for name, args in urls:
             with self.subTest(name=name):
@@ -66,9 +77,9 @@ class TestRoutes(TestCase):
                 self.assertRedirects(response, redirect_url)
 
     def test_redirect_for_anonymous_client_edit_delete(self):
-        ''''Удаление и редактирование заметки доступно только автору'''
-        login_url = reverse('users:login')
-        for name in ('notes:delete', 'notes:edit'):
+        """Удаление и редактирование заметки доступно только автору."""
+        login_url = reverse(LOGIN_URL)
+        for name in (DELETE_URL, EDIT_URL):
             with self.subTest(name=name):
                 url = reverse(name, args=(self.note.slug,))
                 redirect_url = f'{login_url}?next={url}'
@@ -77,9 +88,9 @@ class TestRoutes(TestCase):
 
     def test_author_notes_done_add(self):
         urls = (
-            ('notes:list', None),
-            ('notes:success', None),
-            ('notes:add', None),
+            (LIST_URL, None),
+            (SUCCESS_URL, None),
+            (ADD_URL, None),
         )
         for name, args in urls:
             with self.subTest(name=name):
