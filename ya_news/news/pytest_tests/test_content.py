@@ -1,59 +1,63 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase, Client
+import pytest
+from django.conf import settings
 from django.urls import reverse
-from notes.models import Note
-from notes.forms import NoteForm
 
-User = get_user_model()
+from news.forms import CommentForm
 
-LIST_URL = reverse('notes:list')
-ADD_URL = reverse('notes:add')
-EDIT_URL = 'notes:edit'
+HOME_URL = reverse('news:home')
 
 
-class TestContent(TestCase):
+@pytest.mark.django_db
+def test_news_count(client, all_news):
+    """Количество новостей на главной странице — не более 10."""
+    response = client.get(HOME_URL)
+    object_list = response.context['object_list']
+    news_count = len(object_list)
+    assert news_count == settings.NEWS_COUNT_ON_HOME_PAGE
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.author = User.objects.create(username='Автор')
-        cls.author_client = Client()
-        cls.author_client.force_login(cls.author)
 
-        cls.reader = User.objects.create(username='Читатель')
-        cls.reader_client = Client()
-        cls.reader_client.force_login(cls.reader)
-        cls.note = Note.objects.create(
-            author=cls.author,
-            title='Заголовок',
-            text='Текст',
-            slug='pasport'
-        )
-        cls.url_list = LIST_URL
-        cls.url_add = ADD_URL
-        cls.url_edit = reverse(EDIT_URL, args=(cls.note.slug,))
+@pytest.mark.django_db
+def test_news_order(client, all_news):
+    """Новости отсортированы от самой свежей к самой старой.
+    Свежие новости в начале списка.
+    """
+    response = client.get(HOME_URL)
+    object_list = response.context['object_list']
+    all_dates = [news.date for news in object_list]
+    sorted_dates = sorted(all_dates, reverse=True)
+    assert all_dates == sorted_dates
 
-    def test_note_in_list_for_author(self):
-        """Отдельная заметка передаётся на страницу со списком заметок."""
-        response = self.author_client.get(self.url_list)
-        object_list = response.context['object_list']
-        self.assertIn(self.note, object_list)
 
-    def test_note_not_in_list_for_another_user(self):
-        """В список заметок одного пользователя не попадают
-        заметки другого пользователя.
-        """
-        response = self.reader_client.get(self.url_list)
-        object_list = response.context['object_list']
-        self.assertNotIn(self.note, object_list)
+@pytest.mark.django_db
+def test_comments_order(client, news, slug_for_comment):
+    """Комментарии на странице отдельной новости отсортированы
+    в хронологическом порядке: старые в начале списка,
+    новые — в конце.
+    """
+    detail_url = reverse('news:detail', args=slug_for_comment)
+    response = client.get(detail_url)
+    news = response.context['news']
+    all_comments = news.comment_set.all()
+    assert all_comments[0].created, all_comments[1].created
 
-    def test_create_note_page_contains_form(self):
-        """На страницу создания заметки передаются формы."""
-        response = self.author_client.get(self.url_add)
-        self.assertIn('form', response.context)
-        form = response.context.get('form')
-        self.assertIsInstance(form, NoteForm)
 
-    def test_edit_note_page_contains_form(self):
-        """На страницу редактирования заметки передаются формы."""
-        response = self.author_client.get(self.url_edit)
-        self.assertIn('form', response.context)
+@pytest.mark.django_db
+def test_authorized_client_has_form(author_client,
+                                    news_detail_url):
+    """Авторизированному пользователю доступна форма для отправки
+    комментария на странице отдельной новости
+    """
+    response = author_client.get(news_detail_url)
+    assert 'form' in response.context
+    form = response.context.get('form')
+    assert isinstance(form, CommentForm)
+
+
+@pytest.mark.django_db
+def test_anonymous_client_has_no_form(client,
+                                      news_detail_url):
+    """Неавторизованному пользователю недоступна форма для отправки
+    комментария на странице отдельной новости
+    """
+    response = client.get(news_detail_url)
+    assert 'form' not in response.context
