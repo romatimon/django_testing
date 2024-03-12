@@ -9,7 +9,7 @@
 - Pytest
 - Unittest
 - 
-# Локальный запуск проекта
+# Запуск проекта
 1. ### Склонируйте репозиторий:
 ```
 git clone https://github.com/romatimon/django_testing
