@@ -50,3 +50,4 @@ cd ya_note
 
 python manage.py test
 ```
+Автор [romatimon](https://github.com/romatimon)
